@@ -17,14 +17,16 @@ const wchar_t CLASS_NAME[] = L"MyWindowClass";
 RECT MainRect;
 
 LRESULT CALLBACK WindProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp);
-void CreateTable(HDC hdc, int tableWidth, int TextBlockHeight, int rowsCount, int colCount);
+void CreateTable(HDC hdc, int TextBlockHeight, int rowsCount, int colCount);
+int GetRowHeight(HDC hdc, vector<string> row, int colWidth);
+string GetLongestString(vector<string> row, size_t count);
 
 vector<vector<string>> stringMatrix = {
-	{"ads", "dsfsd", "sdf", "ds", "fdsa"},
-	{"ads", "dsfsd", "sdf", "ds", "wryi"},
-	{"ads", "dkkkkkkkkkkkkkyghjiuygvhjgiyufghi7ygudasdasdasdsadd", "sdf", "ds", "fdsa"},
-	{"ads", "dkkkkkkkkkkkkkyghjiuygvhjgiyufghi7ygudasdasdasdsadd", "sdf", "ds", "fdsa"},
-	{"ads", "dsfsd", "sdf", "ds", "fdsa"}
+	{"The lives of guards", "The presidencies", "on Death Row are affected", "to be reunited with", " by one of their charges"},
+	{"a black man accused", "dsfsd", "the Vietnam War, the Watergate scandal", "of child murder ", "wryi"},
+	{"and other historical events ", "dkkkkkkkkkkkk", " yet who has", "of an Alabama man with an IQ of 75", "fdsa"},
+	{"ABS", "dkkkkkkkkkkkkkyghjiuygvhjgiyufghi7ygudasdasdasdsadd", "sdf", "a mysterious gift", "unfold from the perspective"},
+	{"whose only desire is", "Kennedy and Johnson", "ZeWardo", "his childhood sweetheart.", "and rape"}
 };
 
 int WINAPI wWinMain(HINSTANCE hInst, HINSTANCE hPrevInst, PWSTR args, int nCmdShow)
@@ -40,7 +42,6 @@ int WINAPI wWinMain(HINSTANCE hInst, HINSTANCE hPrevInst, PWSTR args, int nCmdSh
 	wc.lpfnWndProc = WindProc;
 	wc.hInstance = hInst;
 	wc.lpszClassName = CLASS_NAME;
-
 
 	if (!RegisterClass(&wc))
 		return -1;
@@ -80,7 +81,7 @@ LRESULT CALLBACK WindProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
 		brush = CreateBrushIndirect(&br);
 		FillRect(hCmpDC, &MainRect, brush);
 		DeleteObject(brush);
-		CreateTable(hCmpDC, MainRect.right - MainRect.left, BlockHeight, rows, cols);
+		CreateTable(hCmpDC, BlockHeight, rows, cols);
 		SetStretchBltMode(hdc, COLORONCOLOR);
 		BitBlt(hdc, 0, 0, MainRect.right - MainRect.left, MainRect.bottom - MainRect.top, hCmpDC, 0, 0, SRCCOPY);;
 		DeleteDC(hCmpDC);
@@ -99,43 +100,52 @@ LRESULT CALLBACK WindProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
 	return 0;
 }
 
-string GetLongestString(vector<string> row, size_t startIndex)
+string GetLongestString(vector<string> row, size_t count)
 {
-	if (startIndex >= row.size())
+	string longestString = row[0];
+	for (size_t j = 0; j < count; j++)
 	{
-		return "";
+		if (row[j].length() > longestString.length()) longestString = row[j];
 	}
-	string longestString = row[startIndex];
-	for (size_t j = startIndex; j < startIndex + cols; j++)
-	{
-		if (row[j].length() > longestString.length())
-			longestString = row[j];
-	}
-
 	return longestString;
 }
 
-void CreateTable(HDC hdc, int tableWidth, int textBlockHeight, int rowsCount, int colCount)
+int GetRowHeight(HDC hdc, vector<string> row, int colWidth)
+{
+	string longestString = GetLongestString(row, row.size());
+	RECT nonDrawableBlock;
+	nonDrawableBlock.left = 0;
+	nonDrawableBlock.top = 0;
+	nonDrawableBlock.bottom = 1;
+	nonDrawableBlock.right = colWidth;
+	wstring line = wstring(longestString.begin(), longestString.end());
+	int Blockheight = DrawText(hdc, line.c_str(), line.length(), &nonDrawableBlock, DT_CALCRECT | DT_WORDBREAK | DT_EDITCONTROL | DT_CENTER);
+	return Blockheight;
+}
+
+void CreateTable(HDC hdc, int textBlockHeight, int rowsCount, int colCount)
 {
 	int TextBlockWidth = (MainRect.right - MainRect.left) / colCount;
-	int totalHeight = textBlockHeight / 2;
+	int totalHeight = textBlockHeight/2;
 	for (int i = 0; i < rowsCount; i++) 
 	{
-		string longestString = GetLongestString(stringMatrix[i], stringMatrix[i].size());
 		int maxRowHeight = textBlockHeight;
+		int BlockHeight = GetRowHeight(hdc, stringMatrix[i], TextBlockWidth);
 		for (int j = 0; j < colCount; ++j) 
 		{
 			RECT Block;
 			Block.left = j * TextBlockWidth;
 			Block.right = Block.left + TextBlockWidth;
 			Block.top = totalHeight;
-			Block.bottom = Block.top + textBlockHeight;
+			Block.bottom = Block.top + BlockHeight;
 			wstring line = wstring(stringMatrix[i][j].begin(), stringMatrix[i][j].end());
-			int currentBlockHeight = DrawText(hdc, line.c_str(), -1, &Block, DT_WORDBREAK | DT_CENTER | DT_END_ELLIPSIS);
-			maxRowHeight = currentBlockHeight > maxRowHeight ? currentBlockHeight : maxRowHeight;
+			int currentBlockHeight = DrawText(hdc, line.c_str(), line.length(), &Block, DT_WORDBREAK | DT_EDITCONTROL | DT_CENTER | DT_END_ELLIPSIS);
+			if (currentBlockHeight > maxRowHeight) maxRowHeight = currentBlockHeight;
 		}
-		MoveToEx(hdc, 0, totalHeight - textBlockHeight / 2, nullptr);
-		LineTo(hdc, MainRect.right, totalHeight - textBlockHeight / 2);
-		totalHeight += maxRowHeight + textBlockHeight / 2;
+		MoveToEx(hdc, 0, totalHeight - textBlockHeight/2, nullptr);
+		LineTo(hdc, MainRect.right, totalHeight - textBlockHeight/2);
+		totalHeight += maxRowHeight + textBlockHeight/2;
 	}
+	MoveToEx(hdc, 0, totalHeight - textBlockHeight/2, nullptr);
+	LineTo(hdc, MainRect.right, totalHeight - textBlockHeight/2);
 }
