@@ -12,7 +12,7 @@ using namespace std;
 #define MAX_ROW 5
 #define PADDINGBLOCK 50
 
-int cols = 3, rows = 3;
+int cols = 0, rows = 0;
 
 const wchar_t CLASS_NAME[] = L"MyWindowClass";
 
@@ -108,9 +108,9 @@ LRESULT CALLBACK WindProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
 				std::wstring ws(wc);
 				std::string EnterNumber = std::string(ws.begin(), ws.end());
 				if (EnterNumber != "") cols = std::stoi(EnterNumber);
-				else cols = 1;
+				else cols = 0;
 				if (cols <= MAX_COL) InvalidateRect(hwnd, &MainRect, NULL);
-				else cols = 1;
+				else cols = 0;
 			}
 			}
 			break;
@@ -176,12 +176,12 @@ int GetRowHeight(HDC hdc, vector<string> row, int startIndex, int colWidth)
 
 void CreateTable(HDC hdc, int textBlockHeight, int rowsCount, int colCount)
 {
-	int TextBlockWidth = (MainRect.right - MainRect.left) / colCount;
-	int totalHeight = textBlockHeight / 2 + PADDINGBLOCK * 2;
 	if (cols < 1 || rows < 1)
 	{
 		return;
 	}
+	int TextBlockWidth = (MainRect.right - MainRect.left) / colCount;
+	int totalHeight = textBlockHeight / 2 + PADDINGBLOCK * 2;
 	for (int i = 0; i < rowsCount; i++)
 	{
 		int maxRowHeight = textBlockHeight;
